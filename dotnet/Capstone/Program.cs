@@ -3,6 +3,11 @@ using System.Runtime.ConstrainedExecution;
 
 namespace Capstone
 {
+    //Creating a Vending Machine class, Item class, and Balance class
+    //Finsish one section of the PDF at a time
+    //Inventory updates need to be read in and added from their individual files
+    //items read in from the file should be sorted individually as a objects with their assigned properties
+    //If item is in the file when the machine starts it is filled with 5 of them
     class Program
     {
         private const string MAIN_MENU_OPTION_DISPLAY_ITEMS = "Display Vending Machine Items";
