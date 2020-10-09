@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Capstone.Classes
 {
-    class Item
+    public class Item
     {
         public string Name { get; set; }
         public double Price { get; set; }
@@ -18,12 +18,13 @@ namespace Capstone.Classes
             this.Price = price;
             this.LocationSlot = locationSlot;
             this.Category = category;
-            this.Quantity = 5;
+            Quantity = 5;
         }
 
         public Item()
         {
-
+            Quantity = 5;
         }
+
     }
 }

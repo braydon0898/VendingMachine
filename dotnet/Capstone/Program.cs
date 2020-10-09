@@ -28,27 +28,12 @@ namespace Capstone
         public void Run()
         {
             VendingMachine ourMachine = new VendingMachine();
-            string currentDirectory = Environment.CurrentDirectory;
-            string inventoryFile = "Inventory.txt";
-            string fullInventoryPath = Path.Combine(currentDirectory, @"..\..\..\..\..\Example Files", inventoryFile);
+            ourMachine.FillInventory();
 
-
-            using (StreamReader sr = new StreamReader(fullInventoryPath))
-            {
-                while (!sr.EndOfStream)
-                {
-                    string line = sr.ReadLine();
-                    string[] lineArray = line.Split("|");
-                    Item item = new Item();
-                    item.Category = lineArray[3];
-                    item.Price = Double.Parse(lineArray[2]);
-                    item.LocationSlot = lineArray[0];
-                    item.Name = lineArray[1];
-                    ourMachine.Inventory.Add(item);
-
-                }
-            }
-
+            ourMachine.IsOn = true;
+            bool isPurchasing = true;
+            bool enoughFunds = true;
+            double amountEntered = 0;
 
                 while (ourMachine.IsOn) //rn this is an infinite loop. You'll need a 'finished' option and then you'll break after that option is selected
                 {
@@ -60,13 +45,79 @@ namespace Capstone
                     }
                     else if (selection == MAIN_MENU_OPTION_PURCHASE)
                     {
-                    Console.WriteLine("Please insert money.");
-                    double amountEntered = double.Parse(Console.ReadLine());
-                    Console.WriteLine("Please select an item");
-                    string selectedItem = Console.ReadLine();
-                    
-                        //do the purchase (probably should call a method to do this too)
+                    while (enoughFunds==false && isPurchasing)
+                    {
+                        Console.WriteLine("Please insert money.");
+                        amountEntered = double.Parse(Console.ReadLine()) + amountEntered;
+                        while (amountEntered <= 0)
+                        {
+                            if (amountEntered > 0)
+                            {
+
+                                break;
+                            }
+                            else
+                            {
+                                Console.WriteLine("Please insert money.");
+                                amountEntered = double.Parse(Console.ReadLine());
+                            }
+
+                        }
+                        Console.WriteLine("Balance: " + amountEntered);
+                        while (isPurchasing && enoughFunds)
+                        {
+                            Console.WriteLine("Please select an item");
+                            string selectedItem = Console.ReadLine();
+                            if (amountEntered > ourMachine.SelectItem(selectedItem))
+                            {
+
+                            }
+                            else
+                            {
+                                enoughFunds = false;
+                                break;
+                            }
+                            amountEntered -= ourMachine.SelectItem(selectedItem);
+                            Console.WriteLine("Balance: " + amountEntered);
+                       
+
+
+                            Console.Write("Do you want to continue purchasing?(Y/N)");
+                            string purchasingAns = Console.ReadLine();
+                            if (purchasingAns == "Y" || purchasingAns == "y")
+                            {
+                                ourMachine.RemoveItemQuantity(selectedItem);
+                                Console.WriteLine(ourMachine.DispenseSound(selectedItem));
+                            }
+                            else if (purchasingAns == "N" || purchasingAns == "n")
+                            {
+                                ourMachine.RemoveItemQuantity(selectedItem);
+                                Console.WriteLine(ourMachine.DispenseSound(selectedItem));
+                                isPurchasing = false;
+                                break;
+                            }
+                            else
+                            {
+                                Console.WriteLine("Invalid response, purchasing ended.");
+                                ourMachine.RemoveItemQuantity(selectedItem);
+                                Console.WriteLine(ourMachine.DispenseSound(selectedItem));
+                                isPurchasing = false;
+                                break;
+                            }
+
+
+                        }
                     }
+                    
+
+                    
+                    //Change to no longer allow a negative balance to occur
+                    //Change to when invalid input for location slot sends back to purchasing screen
+
+                    
+
+                    
+                }
 
                 }
         }
