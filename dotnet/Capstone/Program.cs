@@ -1,7 +1,4 @@
 ﻿using System;
-using System.IO;
-using System.Collections.Generic;
-using System.Runtime.ConstrainedExecution;
 using Capstone.Classes;
 
 namespace Capstone
@@ -14,8 +11,15 @@ namespace Capstone
     class Program
     {
         private const string MAIN_MENU_OPTION_DISPLAY_ITEMS = "Display Vending Machine Items";
-    	private const string MAIN_MENU_OPTION_PURCHASE = "Purchase";
-	    private readonly string[] MAIN_MENU_OPTIONS = { MAIN_MENU_OPTION_DISPLAY_ITEMS, MAIN_MENU_OPTION_PURCHASE }; //const has to be known at compile time, the array initializer is not const in C#
+        private const string MAIN_MENU_OPTION_PURCHASE = "Purchase";
+        private const string MAIN_MENU_OPTION_EXIT = "Exit";
+        private const string MAIN_MENU_OPTION_SALES_REPORT = "Sales Report";
+        private readonly string[] MAIN_MENU_OPTIONS = { MAIN_MENU_OPTION_DISPLAY_ITEMS, MAIN_MENU_OPTION_PURCHASE, MAIN_MENU_OPTION_EXIT, MAIN_MENU_OPTION_SALES_REPORT }; //const has to be known at compile time, the array initializer is not const in C#
+
+        private const string PURCHASE_MENU_OPTION_FEED_MONEY = "Feed Money";
+        private const string PURCHASE_MENU_OPTION_SELECT_PRODUCT = "Select product";
+        private const string PURCHASE_MENU_OPTION_FINISH_TRANSACTION = "Finish transaction";
+        private readonly string[] PURCHASE_MENU_OPTIONS = { PURCHASE_MENU_OPTION_FEED_MONEY, PURCHASE_MENU_OPTION_SELECT_PRODUCT, PURCHASE_MENU_OPTION_FINISH_TRANSACTION };
 
         private readonly IBasicUserInterface ui = new MenuDrivenCLI();
 
@@ -25,103 +29,82 @@ namespace Capstone
             p.Run();
         }
 
-        public void Run()
+        private void Run()
         {
-            VendingMachine ourMachine = new VendingMachine();
-            ourMachine.FillInventory();
 
-            ourMachine.IsOn = true;
-            bool isPurchasing = true;
-            bool enoughFunds = true;
-            double amountEntered = 0;
+            // create vending machine and vending machine customer objects
+            VendingMachine myVendingMachine = new VendingMachine();
+            myVendingMachine.Owner = "Umbrella Corp";
+            myVendingMachine.Model = "Vendo-Matic 600";
 
-                while (ourMachine.IsOn) //rn this is an infinite loop. You'll need a 'finished' option and then you'll break after that option is selected
+            VendingMachineCustomer myVendingMachineCustomer = new VendingMachineCustomer();
+
+            myVendingMachine.TurnVendingMachineOn();    //turn vending machine on
+            myVendingMachine.FillInventory();           //read inventory from txt file
+            myVendingMachine.SetInventoryQuantities();  //assign all items in machine qty = 5
+
+            while (myVendingMachine.IsOn)               // only show menus if vending machine is on...
+            {
+                String mainMenuSelection = (string)ui.PromptForSelection(MAIN_MENU_OPTIONS);  // main menu prompt for selection
+                if (mainMenuSelection == MAIN_MENU_OPTION_DISPLAY_ITEMS)
                 {
-                    String selection = (string)ui.PromptForSelection(MAIN_MENU_OPTIONS);
-                    if (selection == MAIN_MENU_OPTION_DISPLAY_ITEMS)
+                    myVendingMachine.PrintCurrentInventory();
+                }
+                if (mainMenuSelection == MAIN_MENU_OPTION_PURCHASE)
+                {
+                    String purchaseMenuSelection = (string)ui.PromptForSelection(PURCHASE_MENU_OPTIONS);
+                    if (purchaseMenuSelection == PURCHASE_MENU_OPTION_FEED_MONEY)
                     {
-                        ourMachine.PrintInventory(); 
-                        //display the vending machine items (probably should call a method to do this)
-                    }
-                    else if (selection == MAIN_MENU_OPTION_PURCHASE)
-                    {
-                    while (enoughFunds==false && isPurchasing)
-                    {
-                        Console.WriteLine("Please insert money.");
-                        amountEntered = double.Parse(Console.ReadLine()) + amountEntered;
-                        while (amountEntered <= 0)
+                        // prompt for money
+                        Console.WriteLine("Please enter money in one dollar increments:");
+                        string amountDeposited = Console.ReadLine();
+                        if (int.Parse(amountDeposited) > 0)
                         {
-                            if (amountEntered > 0)
-                            {
-
-                                break;
-                            }
-                            else
-                            {
-                                Console.WriteLine("Please insert money.");
-                                amountEntered = double.Parse(Console.ReadLine());
-                            }
+                            myVendingMachineCustomer.DepositMoney(int.Parse(amountDeposited));
+                            // logs in audit file when a customer has deposited money
+                            // logs date, time, amount fed, current customer balance
+                            myVendingMachine.PrintToAuditFile(DateTime.Now.ToString() + " FEED MONEY: $" + +(decimal)int.Parse(amountDeposited) + " $" + myVendingMachineCustomer.Balance);
 
                         }
-                        Console.WriteLine("Balance: " + amountEntered);
-                        while (isPurchasing && enoughFunds)
+                        else
                         {
-                            Console.WriteLine("Please select an item");
+                            Console.WriteLine("Negative or zero deposits not allowed.");
+                        }
+                    }
+                    if (purchaseMenuSelection == PURCHASE_MENU_OPTION_SELECT_PRODUCT)
+                    {
+                        if (myVendingMachineCustomer.HasBalance())
+                        {
+                            Console.WriteLine("Please select a product by entering the slot number:");
                             string selectedItem = Console.ReadLine();
-                            if (amountEntered > ourMachine.SelectItem(selectedItem))
-                            {
-
-                            }
-                            else
-                            {
-                                enoughFunds = false;
-                                break;
-                            }
-                            amountEntered -= ourMachine.SelectItem(selectedItem);
-                            Console.WriteLine("Balance: " + amountEntered);
-                       
-
-
-                            Console.Write("Do you want to continue purchasing?(Y/N)");
-                            string purchasingAns = Console.ReadLine();
-                            if (purchasingAns == "Y" || purchasingAns == "y")
-                            {
-                                ourMachine.RemoveItemQuantity(selectedItem);
-                                Console.WriteLine(ourMachine.DispenseSound(selectedItem));
-                            }
-                            else if (purchasingAns == "N" || purchasingAns == "n")
-                            {
-                                ourMachine.RemoveItemQuantity(selectedItem);
-                                Console.WriteLine(ourMachine.DispenseSound(selectedItem));
-                                isPurchasing = false;
-                                break;
-                            }
-                            else
-                            {
-                                Console.WriteLine("Invalid response, purchasing ended.");
-                                ourMachine.RemoveItemQuantity(selectedItem);
-                                Console.WriteLine(ourMachine.DispenseSound(selectedItem));
-                                isPurchasing = false;
-                                break;
-                            }
-
-
+                            myVendingMachine.PurchaseItem(selectedItem, myVendingMachineCustomer);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Must deposit money before making a selection!");
                         }
                     }
-                    
-
-                    
-                    //Change to no longer allow a negative balance to occur
-                    //Change to when invalid input for location slot sends back to purchasing screen
-
-                    
-
-                    
+                    if (purchaseMenuSelection == PURCHASE_MENU_OPTION_FINISH_TRANSACTION)
+                    {
+                        //dispense change
+                        Console.WriteLine(myVendingMachine.DispenseChange(myVendingMachineCustomer));
+                    }
                 }
-
+                if (mainMenuSelection == MAIN_MENU_OPTION_EXIT)
+                {
+                    break;
                 }
+                if (mainMenuSelection == MAIN_MENU_OPTION_SALES_REPORT)
+                {
+                    //logic for sales reports goes here...
+                    // SALES REPORT FUNCTIONS
+                    myVendingMachine.PrintSalesReport();
+                    myVendingMachine.TurnVendingMachineOff();
+                }
+            }
+            myVendingMachine.IsOn = false;
         }
-
-
     }
+
 }
+
